@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: "gateway-service"
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  security:
+    oauth2:
+      client:
+        registration:
+          my_authorization_server:
+            client-id: ${CLIENT_ID:client}
+            client-name: ${CLIENT_NAME:authorization-server}
+            client-secret: ${CLIENT_SECRET:secret}
+            provider: ${OAUTH2_PROVIDER:my_authorization_server}
+            client-authentication-method: ${CLIENT_AUTH_METHOD:client_secret_basic}
+            redirect-uri: ${CLIENT_REDIRECT_URI:http://localhost:7070}/login/oauth2/code/my_authorization_server
+            scope: ${CLIENT_SCOPE:openid}
+        provider:
+          my_authorization_server:
+            issuer-uri: ${ISSUER_URI:http://localhost:8080}/as
+  cloud:
+    gateway:
+      routes:
+        - id: authorization-server
+          uri: ${AUTHORIZATION_SERVER_URL:http://localhost:8080}/as
+          predicates:
+            - Path=/as/**
+        - id: payment-service
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:9090}/payment
+          predicates:
+            - Path=/payment/**
+      default-filters:
+        - SaveSession
+        - TokenRelay
+
+  data:
+    redis:
+      connect-timeout: 2s
+      host: localhost
+      port: 6379
+      timeout: 1s
+  session:
+    redis:
+      namespace: upb:gateway
+
+server:
+  port: 7070
+  netty:
+    connection-timeout: 2s
+    idle-timeout: 15
+  shutdown: graceful
+  forward-headers-strategy: framework
